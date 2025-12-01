@@ -1,0 +1,47 @@
+{
+  "name": "moto-ecommerce",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:api": "turbo run dev --filter=api",
+    "dev:web": "turbo run dev --filter=web",
+    "build": "turbo run build",
+    "build:api": "turbo run build --filter=api",
+    "build:web": "turbo run build --filter=web",
+    "start": "turbo run start",
+    "start:api": "turbo run start --filter=api",
+    "start:web": "turbo run start --filter=web",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "db:generate": "cd apps/api && pnpm prisma generate",
+    "db:migrate": "cd apps/api && pnpm prisma migrate dev",
+    "db:push": "cd apps/api && pnpm prisma db push",
+    "db:seed": "cd apps/api && pnpm prisma db seed",
+    "db:studio": "cd apps/api && pnpm prisma studio",
+    "db:reset": "cd apps/api && pnpm prisma migrate reset"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.21.0",
+  "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "eslint": "^9.39.1",
+    "prettier": "^3.6.2",
+    "prisma": "^6.19.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.6",
+    "turbo": "^2.6.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "bcryptjs": "^3.0.3"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  }
+}

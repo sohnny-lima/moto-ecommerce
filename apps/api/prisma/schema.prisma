@@ -1,0 +1,228 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  ADMIN
+  CUSTOMER
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  MERCADOPAGO
+  CULQI
+  DEMO
+}
+
+// ============================================
+// MODELOS DE USUARIOS Y AUTENTICACIÓN
+// ============================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  phone     String?
+  role      UserRole @default(CUSTOMER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  cart   Cart?
+  orders Order[]
+
+  @@map("users")
+}
+
+// ============================================
+// MODELOS DE CATÁLOGO
+// ============================================
+
+model Brand {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  logoUrl     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relaciones
+  products Product[]
+
+  @@map("brands")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  imageUrl    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relaciones
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  price       Decimal  @db.Decimal(10, 2)
+  brandId     String
+  categoryId  String
+  images      String[] // Array de URLs de imágenes
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relaciones
+  brand    Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  category Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  variants Variant[]
+
+  @@map("products")
+}
+
+model Variant {
+  id        String   @id @default(cuid())
+  productId String
+  color     String
+  stock     Int
+  sku       String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  product    Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  @@map("variants")
+}
+
+// ============================================
+// MODELOS DE CARRITO DE COMPRAS
+// ============================================
+
+model Cart {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  variantId String
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, variantId])
+  @@map("cart_items")
+}
+
+// ============================================
+// MODELOS DE ÓRDENES Y PAGOS
+// ============================================
+
+model Order {
+  id           String      @id @default(cuid())
+  userId       String
+  status       OrderStatus @default(PENDING)
+  subtotal     Decimal     @db.Decimal(10, 2)
+  shippingCost Decimal     @db.Decimal(10, 2)
+  tax          Decimal     @db.Decimal(10, 2)
+  total        Decimal     @db.Decimal(10, 2)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // Relaciones
+  user    User        @relation(fields: [userId], references: [id])
+  items   OrderItem[]
+  payment Payment?
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String  @id @default(cuid())
+  orderId    String
+  variantId  String
+  quantity   Int
+  unitPrice  Decimal @db.Decimal(10, 2)
+  totalPrice Decimal @db.Decimal(10, 2)
+
+  // Relaciones
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant Variant @relation(fields: [variantId], references: [id])
+
+  @@map("order_items")
+}
+
+model Payment {
+  id              String          @id @default(cuid())
+  orderId         String          @unique
+  provider        PaymentProvider
+  status          PaymentStatus   @default(PENDING)
+  amount          Decimal         @db.Decimal(10, 2)
+  currency        String          @default("PEN")
+  externalId      String? // ID del pago en MercadoPago o Culqi
+  externalStatus  String? // Estado original del proveedor
+  paymentMethod   String? // Tarjeta, efectivo, etc.
+  transactionDate DateTime?
+  errorMessage    String?
+  webhookData     Json? // Datos completos del webhook
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relaciones
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
